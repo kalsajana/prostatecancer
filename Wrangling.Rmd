@@ -1,0 +1,166 @@
+---
+title: "Data-Preparations"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r message=FALSE, warning=FALSE}
+require(tidyverse)
+require(lubridate)
+
+rm(list = ls()) #Clear env
+```
+
+### Importing the raw CSV file
+
+Importing the raw CSV file and convert to tibble
+
+*MD5 of orginal CSV : a2dd0181aa782319ca8b89ad0e52c501*
+
+```{r}
+#Import of the file
+datRAW <- read.csv("data/21-Jan-2021_AS_258_Cohort.csv",
+                header = TRUE, 
+                stringsAsFactors = FALSE, 
+                strip.white = TRUE,
+                sep = ',',
+                na.strings=c(""," ","NA"))
+
+datRAW <- dplyr::as_tibble(datRAW)
+glimpse(datRAW);datRAW
+```
+
+### Cleaning up
+
+Cleaning up the column names, convert dates to data-time format using lubridate, and then removing the "years" from duration.
+
+```{r}
+dat <- datRAW
+
+#New col names
+newcols <- c("ID","AgeDx","FamHx","Eth","LastFU","LastFU.Orig","Dx.to.LastFU","Biopsy.Dat","Biopsy.Dat.Orig","Biopsy.PSA","BioClosest.Dat","BioClosest.PSA","Biopsy.Vol","Biopsy.GGG","Biopsy.PosCores","Trt.Dat","Trt.Mod")
+colnames(dat) <- newcols
+
+#Change the dates into date-type
+dat <- dat %>% 
+  mutate(across(c("LastFU", "Biopsy.Dat","BioClosest.Dat","Trt.Dat"),ymd))
+
+#Remove the "years" in Dx.to.LastFU
+dat$Dx.to.LastFU <- dat$Dx.to.LastFU %>% str_remove_all(" years") %>% as.double()
+
+
+#Change all into simple case, and replace all spaces with _.
+dat <- dat %>% 
+  mutate(across(where(is.character), str_to_lower)) %>% 
+  mutate(across(where(is.character), ~str_replace_all(.x," ","_")))
+
+
+#Assign degree of relatedness - See https://medicine.utah.edu/surgery/research/images/sparc-graphics/degrees-of-relatedness.pdf
+corRef <- read.csv("cor_reference.csv",
+                header = TRUE, 
+                stringsAsFactors = FALSE, 
+                strip.white = TRUE,
+                sep = ',',
+                na.strings=c(""," ","NA"))
+
+dat <- mutate(dat,FamHx = str_remove_all(FamHx,"_")) %>% 
+  left_join(corRef,by = "FamHx") %>%
+  relocate(Cor, .after = FamHx )
+```
+
+## Removing outliers
+
+Removing obvious outliers
+
+```{r}
+#Removing outliers
+overview <- dat %>%
+  select(where(is.numeric) & !c(ID)) %>% 
+  gather() %>% 
+  group_by(key) %>% 
+  summarise(
+    n = length(value),
+    mean = mean(value, na.rm = TRUE),
+    max = max(value, na.rm = TRUE),
+    min = min(value, na.rm = TRUE),
+    iqr = IQR(value, na.rm = TRUE)
+  )
+
+#Remove all negatives
+dat[dat <= 0] <- NA
+
+
+```
+
+
+### Nesting
+
+Creating nested tibbles via Purr to simplify data analysis.
+
+```{r, message=FALSE}
+
+#Function to split the data_frame, and nest the data.
+squisher <- function(input,col_list,newcolname){
+  temp <- input %>% 
+    select(c(ID,col_list)) %>%
+    fill(ID,.direction = "down") %>%
+    filter(rowSums(is.na(.[,col_list])) != ncol(.[,col_list])) %>% #Remove rows that only have NA for data
+    group_by(ID) %>% 
+    nest() %>% 
+    ungroup()
+  colnames(temp) <- c("ID",newcolname)
+  return(temp)
+}
+
+cols_Base <- c("ID","AgeDx","FamHx","Eth","LastFU","LastFU.Orig","Dx.to.LastFU")
+
+cols_Biopsy <- c("Biopsy.Dat","Biopsy.Dat.Orig","Biopsy.PSA","BioClosest.Dat","BioClosest.PSA","Biopsy.Vol","Biopsy.GGG","Biopsy.PosCores")
+
+cols_FamHx <- c("FamHx","Cor")
+
+cols_Treat <- c("Trt.Dat","Trt.Mod")
+
+
+dat_Base <- dat %>% 
+  select(cols_Base) %>% 
+  filter(is.na(ID) == FALSE)
+dat_FamHx <- squisher(dat,cols_FamHx,"nest.FamHx")
+dat_Biopsy <- squisher(dat,cols_Biopsy,"nest.Biopsy")
+dat_Treat <- squisher(dat,cols_Treat,"nest.Treat")
+
+#Joining main data with nested tibles
+dat_nst <- dat_Base %>%
+  full_join(dat_FamHx,by = "ID") %>%
+  full_join(dat_Biopsy, by = "ID") %>%
+  full_join(dat_Treat, by = "ID")
+rm(dat_Base, dat_FamHx, dat_Biopsy, dat_Treat)
+
+#Arrange in descending order according to ID
+dat_nst <- dat_nst %>% arrange(ID)
+
+glimpse(dat_nst);dat_nst
+
+```
+
+
+### Unique ID
+
+Add a unique ID to each of the rows in the non-nested data so that they can be arranged without issue.
+```{r}
+#Add an unique ID for row easier reorganization in dat object
+dat_arr <- dat %>% 
+  mutate(Rec = 1:nrow(dat),.after = "ID") %>%
+  fill(ID,.direction = "down")
+```
+
+### Save
+
+Save into compressed RDS object
+
+```{r}
+saveRDS (dat_nst, file = "rdsobs/dat_nst.RDS")
+saveRDS (dat_arr, file = "rdsobs/dat_arr.RDS")
+saveRDS (newcols, file = "rdsobs/rdsnewcol.RDS")
+
+```

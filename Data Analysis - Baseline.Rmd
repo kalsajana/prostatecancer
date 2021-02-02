@@ -1,0 +1,173 @@
+---
+title: "Data Analysis - Baseline"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r message=FALSE, warning=FALSE}
+library(gt)
+library(magrittr)
+library(tidyverse)
+library(glue)
+library(lubridate)
+```
+
+```{r}
+rm(list = ls())
+dat_nst <- readRDS("rdsobs/dat_nst.RDS")
+dat_arr <- readRDS("rdsobs/dat_arr.RDS")
+```
+
+### Actual Analysis
+
+**Things that are being analyzed:**
+
+-   Patient age at diagnosis = Mean, SD
+
+-   Ethnicity = n, %
+
+-   First degree relative with PrCa = n, %
+
+-   PSA at first biopsy = Median, IQR
+
+-   PSA density at first biopsy, classified as n with either \<0.15 or \>= 0.15 Median = n, %
+
+-   Positive cores on first biopsy = n, %
+
+-   GGG at first biopsy = n, %
+
+```{r message=FALSE}
+ids <- unique(dat_arr$ID)
+ntot <- unique(dat_arr$ID) %>% length()
+
+#Age - mean,sd.
+age <- dat_arr %>% 
+  select(AgeDx) %>% 
+  summarise(
+    mean = mean(AgeDx,na.rm = TRUE)  ,
+    sd = sd(AgeDx,na.rm = TRUE)  
+  ) 
+
+#Ethnicity -n,%
+eth <- dat_arr %>% 
+  select(Eth) %>%
+  drop_na() %>% 
+  group_by(Eth) %>% 
+  summarise(n = length(Eth)) %>% 
+  ungroup() %>% 
+  mutate(percent = n/sum(n)*100)
+
+#Family hx of of first degree relatives - n,%
+fmhx <- dat_arr %>% 
+  select(ID,Cor) %>% 
+  drop_na() %>%
+  filter(Cor == 1) %>% 
+  distinct() %>% 
+  summarise(
+    n = length(ID),
+    percent = n/ntot*100  
+  ) 
+
+#PSA at first visit master file
+tmpPsa_char <- dat_nst[,c("ID","nest.Biopsy")] %>% 
+  unnest(nest.Biopsy) %>% 
+  group_by(ID) %>% 
+  filter(Biopsy.Dat == min(Biopsy.Dat)) %>% 
+  summarise(Biopsy.PSA,
+            Biopsy.GGG,
+            Biop.PSADensity = Biopsy.PSA/Biopsy.Vol,
+            Biopsy.PosCores) %>% 
+  ungroup() 
+
+#PSA 
+psa <- tmpPsa_char %>% 
+  summarise(
+    med = median(Biopsy.PSA, na.rm=TRUE),
+    firstq = quantile(Biopsy.PSA,  na.rm = TRUE)[2],
+    thirdq = quantile(Biopsy.PSA,  na.rm = TRUE)[4] 
+  ) 
+
+#GGG
+gg <- tmpPsa_char %>% 
+  select(Biopsy.GGG) %>% 
+  drop_na() %>% 
+  group_by(Biopsy.GGG) %>% 
+  summarise(n = length(Biopsy.GGG)) %>% 
+  ungroup() %>% 
+  mutate(percent = n/sum(n)*100)
+
+#Positive Cores
+cores <- tmpPsa_char %>% 
+  select(Biopsy.PosCores) %>% 
+  drop_na() %>% 
+  group_by(Biopsy.PosCores) %>% 
+  summarise(n = length(Biopsy.PosCores)) %>% 
+  ungroup() %>% 
+  mutate(percent = n/sum(n)*100)
+
+#PSA Density
+psaden <- tmpPsa_char %>% 
+  select(Biop.PSADensity) %>% 
+  drop_na() %>% 
+  mutate(gate = case_when(
+    Biop.PSADensity < 0.15 ~ "low",
+    Biop.PSADensity >= 0.15 ~ "high"
+    )) %>% 
+  group_by(gate) %>% 
+  summarise(n = length(gate)) %>% 
+  ungroup() %>% 
+  mutate(percent = n/sum(n)*100)
+
+```
+
+### Fusing the data to make rough columns
+
+```{r}
+subtable_bl_names <- c("age", "eth", "fmhx", "psa","psaden", "gg", "cores")
+subtable_blRAW <- list(age, eth, fmhx, psa, psaden, gg, cores)
+names(subtable_blRAW) <- subtable_bl_names
+subtable_blRAW
+
+#TABLES WITH SUBTABLES
+with_subtable <- c( "eth", "psaden", "gg", "cores")
+
+subtable_bl <- subtable_blRAW
+subtable_bl <- map2(subtable_bl,subtable_bl_names,function(x,y){
+  x %<>% mutate_if(is.numeric, ~ round(.,2))
+  size <- ncol(x)
+  if(size == 2){x %<>% mutate(nc_data = glue("{.[[size-1]]} ({.[[size]]})"))}
+  if((size >= 3) & (y %in% with_subtable)){x %<>%  mutate(nc_data = glue("{.[[size-1]]} ({.[[size]]})"))}
+  if((size >= 3) & !(y %in% with_subtable)){x %<>% mutate(nc_data = glue("{.[[size-2]]} ({.[[size-1]]} - {.[[size]]})"))}
+  if(y %in% with_subtable){
+    x %<>% rename(nc_subhead = 1)
+    x %<>% mutate(nc_subhead = nc_subhead %>% 
+                    as.character() %>% 
+                    str_replace_all("_"," ") %>% 
+                    str_to_title())
+  }
+  x %<>% select(contains("nc_"))
+}) 
+
+#Creating finished table
+fintable_bl <- map2(subtable_bl,
+                       names(subtable_bl),
+                       function(x,y){add_column(x,nc_head = y,.before = 1)}) %>% bind_rows()
+
+
+#Saving data
+saveRDS(subtable_blRAW, file = "rdsobs/subtable_blRAW.RDS")
+write.csv(fintable_bl,"output/fintable_bl.csv")
+```
+
+```{r}
+#Finally drawing rough table with libgt
+gttable_bl <- fintable_bl %>%
+  gt(rowname_col = "nc_subhead",
+     groupname_col = "nc_head") %>% 
+  tab_header(md("**Baseline charasteristics**"),
+             subtitle = md("Edmonton cohort"))
+  
+gttable_bl
+
+```

@@ -1,0 +1,17 @@
+﻿APCaRI ID,ID,integer,integer
+Age at Diagnosis,AgeDx,integer,integer
+Family History of Prostate Cancer,FamHx,character,factor
+Ethnicity,Eth,character,factor
+Last Date of Contact,LastFU,Date,Date
+Last Date of Contact Origin,LastFU.Orig,character,factor
+Diagnosis to Last Date of Contact,Dx.to.LastFU,character,character
+Biopsy Date,Biopsy.Dat,Date,Date
+Biopsy Date Origin,Biopsy.Dat.Orig,character,factor
+Biopsy Listed PSA Value,Biopsy.PSA,double,double
+PSA Date Most Recent to Biopsy,BioClosest.Dat,Date,Date
+PSA Value Most Recent to Biopsy,BioClosest.PSA,double,double
+Prostate Volume at Biopsy,Biopsy.Vol,double,double
+Gleason Grade Group at Biopsy,Biopsy.GGG,integer,integer
+Number of Cores with Cancer,Biopsy.PosCores,integer,integer
+Treatment Date,Trt.Dat,Date,Date
+Treatment Modality,Trt.Mod,character,factor

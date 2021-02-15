@@ -21,6 +21,7 @@ db[db < 0] <- NaN
 ##Change all string to simple case
 db <- mutate(db,across(where(is.character), ~ str_to_lower(.x)))
 
+
 # Nesting --------------
 
 ##Demographics
@@ -70,5 +71,17 @@ rm(tmp0,tmp1,tmp2,tmp3,tmp4)
 ##Arrange by ascending ID
 nestdb <- arrange(nestdb, ID)
 
+
+# Special edits -------------
+
+##Change all LHRH or ADT, and remove any duplicates
+nestdb <- nestdb %>% 
+  mutate(data.trt = data.trt %>% 
+           map(~ .x %>% 
+                 mutate(Trt.Mod = str_replace_all(Trt.Mod,"adt","lhrh")) %>% 
+                 distinct()
+               )
+         )
+  
 # Save to RDS ---------------
 saveRDS(nestdb, file = "rdsobj/nestdb.RDS")

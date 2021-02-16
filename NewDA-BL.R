@@ -25,7 +25,7 @@ eth <- nestdb %>%
 ## First degree fam-relative(n,%)
 fmhx <- nestdb %>% 
   mutate(famcount = data.fhx %>% 
-           map_int(~ .x$FamHx %in% c("son","sibling","brother","parent","father") %>% sum())) %>% 
+           map_int(~ .x$FamHx %in% c("son","sibling","brother","parent","father") %>% sum()) %>% {ifelse(. > 0,T,F)}) %>% 
   group_by(famcount) %>%
   summarise(n = n()) %>% 
   mutate(pct = n/sum(n) * 100)
@@ -41,11 +41,19 @@ psa <- nestdb %>%
     thirdq = quantile(firstpsa,  na.rm = TRUE) %>% .[[4]] 
   )
 
+##GGG on first biopsy (n,%)
+gggfb <- nestdb %>% 
+  mutate(firstggg = data.biop %>% 
+               map_int(~ .x %>% slice(which.min(Biopsy.Dat)) %>% .$Biopsy.GGG)) %>% 
+  group_by(firstggg) %>% 
+  summarise(n = n()) %>% 
+  mutate(pct = n/sum(n) * 100)
+
 ## Of positive cores (n,%)
 cores <- nestdb %>% 
-  mutate(firstggg = data.biop %>% 
+  mutate(firstc = data.biop %>% 
            map_int(~ .x %>% slice(which.min(Biopsy.Dat)) %>% .$Biopsy.PosCores)) %>% 
-  group_by(firstggg) %>% 
+  group_by(firstc) %>% 
   summarise(n = n()) %>% 
   mutate(pct = n/sum(n) * 100)
 
@@ -63,7 +71,7 @@ dens <- nestdb %>%
 
 
 # Create a list of all the suitables ---------------------
-subtbl_bl <- list(age,eth,fmhx,psa,cores,dens) %>% 
-  set_names(c("age","eth","fmhx","psa","cores","dens"))
+subtbl_bl <- list(age,eth,fmhx,psa,gggfb,cores,dens) %>% 
+  set_names(c("age","eth","fmhx","psa","gggfb","cores","dens"))
 
 map(subtbl_bl,~.x %<>% mutate_if(is.numeric, ~ round(.,2)))

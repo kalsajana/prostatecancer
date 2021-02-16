@@ -42,7 +42,8 @@ timebiop <- map(nestdb$data.biop, ~ .x %>%
   )
 
 ## Number of upgrades at follow up biopsy to different GGG
-upgradebiop <- map(nestdb$data.biop, ~ .x %>% 
+upgradebiop <- nestdb$data.biop %>% 
+  map(~ .x %>% 
       arrange(Biopsy.Dat) %>% 
       mutate(deltaggg = (Biopsy.GGG - lag(Biopsy.GGG)))) %>% 
   bind_rows() %>% 
@@ -55,13 +56,13 @@ timetreat <- nestdb %>%
   mutate(firsttrtdat = data.trt %>% 
            map_dbl(~ .x %>% filter(rank(Trt.Dat, ties.method = "first")==1) %>% .[[1]]) %>% 
            as_date()) %>% 
-  mutate(firsttrtmod = data.trt %>% 
-           map_chr(~ .x %>% filter(rank(Trt.Dat, ties.method = "first")==1) %>% .[[2]])) %>% 
+  # mutate(firsttrtmod = data.trt %>% 
+  #          map_chr(~ .x %>% filter(rank(Trt.Dat, ties.method = "first")==1) %>% .[[2]])) %>% 
   mutate(lastbiopsydate = data.biop %>% 
            map_dbl(~ .x %>% filter(Biopsy.Dat.Orig != "biopsy_posttreatment" & rank(Biopsy.Dat, ties.method = "first")==1) %>% .[[1]]) %>% 
            as_date()) %>% 
   mutate(datdiff =  lastbiopsydate %--% firsttrtdat/years(1)) %>% 
-  group_by(firsttrtmod) %>% 
+  #group_by(firsttrtmod) %>% 
   summarise(
     med = median(datdiff, na.rm = TRUE),
     max = max(datdiff, na.rm = TRUE),
@@ -76,9 +77,21 @@ trtrec <- nestdb %>%
   summarise(n = n(),
             pct = n/(nrow(nestdb)) * 100)
 
+## Median upgrading free survival
+timesurviv <- nestdb$data.biop %>% 
+  map(~ .x %>% 
+         arrange(Biopsy.Dat) %>% 
+         mutate(timeupgrade = ifelse((Biopsy.GGG - lag(Biopsy.GGG)) >= 1, lag(Biopsy.Dat) %--% Biopsy.Dat/years(1), NA))) %>%
+  bind_rows() %>% 
+  summarise(
+    med = median(timeupgrade, na.rm = TRUE),
+    max = max(timeupgrade, na.rm = TRUE),
+    min = min(timeupgrade, na.rm = TRUE))
+
+
 # Create a list of all the sub-tables ---------------------
-subtbl_trt <- list(lenfu,numfubiop,timebiop,upgradebiop,timetreat,trtrec) %>% 
-  set_names(c("lenfu","numfubiop","timebiop","upgradebiop","timetreat","trtrec"))
+subtbl_trt <- list(lenfu,numfubiop,timebiop,upgradebiop,timetreat,trtrec, timesurviv) %>% 
+  set_names(c("lenfu","numfubiop","timebiop","upgradebiop","timetreat","trtrec", "timesurviv"))
 
 map(subtbl_trt,~.x %<>% mutate_if(is.numeric, ~ round(.,2)))
 

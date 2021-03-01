@@ -1,7 +1,6 @@
 library(tidyverse)
 library(janitor)
 
-
 # Import  ---------------------------------------------------------------
 rm(list = ls())
 
@@ -116,10 +115,13 @@ nestdb_g1 <- nestdb %>%
   mutate(data.biop = map(data.biop, ~ .x %>% 
                            arrange(Biopsy.Dat) %>% 
                            replace_na())) %>% 
-  mutate(firstggg = map_chr(data.biop, ~ pull(.x, Biopsy.GGG) %>% .[[1]])) %>% 
-  filter(firstggg == 1) %>% 
-  select(ID:data.trt)
+  mutate(firstggg = map_chr(data.biop, ~ pull(.x, Biopsy.GGG) %>% .[[1]])) %>%
+  {. ->> temp} %>% 
+  filter(firstggg == 1) %>% select(ID:data.trt)
+
+nestdb_gx <- temp %>% filter(!firstggg == 1) %>% select(ID:data.trt)
 
 # Save to RDS ------------------------------------------------------------------
 saveRDS(nestdb, file = "rdsobj/nestdb.RDS")
 saveRDS(nestdb_g1, file = "rdsobj/nestdb_g1.RDS")
+saveRDS(nestdb_gx, file = "rdsobj/nestdb_gx.RDS")

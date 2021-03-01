@@ -3,8 +3,8 @@ library(tidyverse)
 
 # Import -------------
 rm(list = ls())
-nestdb <- readRDS("rdsobj/nestdb_g1.RDS")
-nestdb_md5 <- tools::md5sum("rdsobj/nestdb_g1.RDS")
+nestdb <- readRDS("rdsobj/nestdb.RDS")
+nestdb_md5 <- tools::md5sum("rdsobj/nestdb.RDS")
 
 coln <- read.csv('col_names.csv', header = FALSE)
 # Analysis -------------------
@@ -42,9 +42,16 @@ psa <- nestdb %>%
   )
 
 ##GGG on first biopsy (n,%)
+replace_na <- function(df){
+  while(is.na(df[1,"Biopsy.GGG"])==TRUE){
+    df=df[-1,]
+  }
+  return(df)
+}
+
 gggfb <- nestdb %>% 
   mutate(firstggg = data.biop %>% 
-               map_int(~ .x %>% slice(which.min(Biopsy.Dat)) %>% .$Biopsy.GGG)) %>% 
+               map_int(~ .x %>% replace_na() %>% slice(which.min(Biopsy.Dat)) %>% .$Biopsy.GGG)) %>% 
   group_by(firstggg) %>% 
   summarise(n = n()) %>% 
   mutate(pct = n/sum(n) * 100)

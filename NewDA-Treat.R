@@ -91,8 +91,10 @@ nextggg <- nestdb %>%
 timetreat <- nestdb %>% 
   mutate(firsttrtdat = data.trt %>% 
            map_dbl(~ .x %>% pull(Trt.Dat) %>% min())) %>% 
-  mutate(lastbiopsydate = data.biop %>% 
-           map_dbl(~ .x %>% pull(Biopsy.Dat) %>% min())) %>% 
+  mutate(lastbiopsydate = map2_dbl(data.biop, firsttrtdat,
+                                   ~ .x %>% 
+                                     filter(Biopsy.Dat < .y) %>% 
+                                     pull(Biopsy.Dat) %>% max())) %>% 
   mutate(datdiff =  as_date(lastbiopsydate) %--% as_date(firsttrtdat)/years(1)) %>% 
   summarise(
     med = median(datdiff, na.rm = TRUE),

@@ -11,10 +11,7 @@ nestdb_md5 <- tools::md5sum("rdsobj/nestdb_g1.RDS")
 
 coln <- read.csv('col_names.csv', header = FALSE)
 
-
-
 # Plot creations -------------------------
-
 mod_data <- mutate(nestdb,
                    # Arrange all by date.bio, and drop any empty GGGs in advance.
                    data.biop = map(data.biop, ~ .x %>% arrange(Biopsy.Dat) %>% drop_na(Biopsy.GGG)),
@@ -29,7 +26,7 @@ mod_data <- mutate(nestdb,
                    lastfoldate = LastFU) %>% 
   mutate(
     #Check if it was censored, 1 = Event at t, 0 = Censored at t. 
-    #Consider censored if last GGG=1. And date of censor is the last treatment date.
+    #Consider censored if last GGG=1. Consider treated if Last GGG > 1.Date of censor is the lastFU date.
     censored = ifelse(is.na(enddate),0,1),
     combined.dates = ifelse(is.na(enddate),lastfoldate,enddate) %>% as_date(),
     time = startdate %--% combined.dates/years(1))
@@ -38,7 +35,7 @@ mod_data <- mutate(nestdb,
 km_surv <- survfit(Surv(time,censored) ~ 1,data = mod_data)
 ggsurvplot(km_surv, 
            risk.table = TRUE,
-           xlab = "Probability of maintaining GGG1",
-           ylab = "Time since first GGG1 biopsy (Years)",
+           xlab = "Time since first biopsy (Years)",
+           ylab = "Probability of upgrading free survival",
            ggtheme = theme_light())
 

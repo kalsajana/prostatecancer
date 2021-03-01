@@ -3,8 +3,8 @@ library(tidyverse)
 
 # Import -------------
 rm(list = ls())
-nestdb <- readRDS("rdsobj/nestdb.RDS")
-nestdb_md5 <- tools::md5sum("rdsobj/nestdb.RDS")
+nestdb <- readRDS("rdsobj/nestdb_g1.RDS")
+nestdb_md5 <- tools::md5sum("rdsobj/nestdb_g1.RDS")
 
 coln <- read.csv('col_names.csv', header = FALSE)
 # Analysis -------------------
@@ -70,8 +70,15 @@ dens <- nestdb %>%
   mutate(pct = n/sum(n) * 100)
 
 
-# Create a list of all the suitables ---------------------
-subtbl_bl <- list(age,eth,fmhx,psa,gggfb,cores,dens) %>% 
-  set_names(c("age","eth","fmhx","psa","gggfb","cores","dens"))
+# Create a list of all the subtables ---------------------
+subtbl_bl <- list("Age at diagnosis" = age,
+                  "Ethnicity" = eth,
+                  "Family Hx" = fmhx,
+                  "First PSA" = psa,
+                  "GGG on first biopsy" = gggfb,
+                  "Number of postivie cores on first biopsy" = cores,
+                  "PSA density at time of first biopsy" = dens) %>% 
+  map(~ .x %>% mutate_if(is.numeric, ~ round(.,2)))
 
-map(subtbl_bl,~.x %<>% mutate_if(is.numeric, ~ round(.,2)))
+print(subtbl_bl)
+

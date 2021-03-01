@@ -1,8 +1,11 @@
 library(tidyverse)
 library(janitor)
 
-# Import  -------------------
-coln <- read.csv('col_names.csv', header = FALSE)
+
+# Import  ---------------------------------------------------------------
+rm(list = ls())
+
+coln <- read_csv('col_names.csv', col_names = FALSE)
 db <- read.csv('data/21-Jan-2021_AS_258_Cohort.csv',
                header = TRUE,
                col.names = coln[[2]],
@@ -10,7 +13,7 @@ db <- read.csv('data/21-Jan-2021_AS_258_Cohort.csv',
                strip.white = TRUE,
                na.strings = c(""," ","NA")) %>% tibble()
 
-# Correct columns ------------------------
+# Correct columns ---------------------------------------------------
 ##Remove years from column
 db$Dx.to.LastFU <- str_remove_all(db$Dx.to.LastFU," years") %>% as.double()
 
@@ -22,7 +25,7 @@ db[db < 0] <- NaN
 db <- mutate(db,across(where(is.character), ~ str_to_lower(.x)))
 
 
-# Nesting --------------
+# Nesting ---------------------------------------------------
 
 ##Demographics
 tmp0 <- db %>% 
@@ -43,6 +46,7 @@ tmp2 <- db %>%
   janitor::remove_empty("rows") %>%
   fill(ID,.direction = "down") %>%
   group_by(ID) %>% 
+  arrange(Biopsy.Dat, .by_group = TRUE) %>% 
   nest(.key = "data.biop")
 
 ##PSA closest to biopsy
@@ -51,6 +55,7 @@ tmp3 <- db %>%
   janitor::remove_empty("rows") %>%
   fill(ID,.direction = "down") %>%
   group_by(ID) %>% 
+  arrange(BioClosest.Dat, .by_group = TRUE) %>% 
   nest(.key = "data.oth")
 
 ##Treatment modality
@@ -59,6 +64,7 @@ tmp4 <- db %>%
   janitor::remove_empty("rows") %>%
   fill(ID,.direction = "down") %>%
   group_by(ID) %>% 
+  arrange(Trt.Dat, .by_group = TRUE) %>% 
   nest(.key = "data.trt")
 
 ##Combine into single object
@@ -72,7 +78,7 @@ rm(tmp0,tmp1,tmp2,tmp3,tmp4)
 nestdb <- arrange(nestdb, ID)
 
 
-# Special edits -------------
+# Special edits ----------------------------------------------------------
 
 ##Change all LHRH or ADT, and remove any duplicates
 nestdb <- nestdb %>% 
@@ -80,8 +86,40 @@ nestdb <- nestdb %>%
            map(~ .x %>% 
                  mutate(Trt.Mod = str_replace_all(Trt.Mod,"adt","lhrh")) %>% 
                  distinct()
-               )
-         )
-  
-# Save to RDS ---------------
+               ))
+
+## Changes all "biopsy.*****" to "biopsy"
+nestdb <- nestdb %>% 
+  mutate(data.biop = data.biop %>% 
+           map(~ .x %>% 
+                 mutate(Biopsy.Dat.Orig = str_replace(Biopsy.Dat.Orig,"biopsy_diagnostic","biopsy"),
+                        Biopsy.Dat.Orig = str_replace(Biopsy.Dat.Orig,"biopsy_posttreatment","biopsy"))
+               ))
+
+## Change ethnicity
+nestdb <- nestdb %>% 
+  mutate(Eth = str_replace(Eth,"latin","hispanic"),
+         Eth = str_replace(Eth,"south east asian","asian"),
+         Eth = str_replace(Eth,"native american","first nations"))
+
+# Alternative file without G1 start --------------------------------------------
+### Drop rows all leading rows with NA for Biopsy.GGG
+replace_na <- function(df){
+  while(is.na(df[1,"Biopsy.GGG"])==TRUE){
+    df=df[-1,]
+  }
+  return(df)
+}
+
+### Then extract the first GGG. Then filter based on this value
+nestdb_g1 <- nestdb %>% 
+  mutate(data.biop = map(data.biop, ~ .x %>% 
+                           arrange(Biopsy.Dat) %>% 
+                           replace_na())) %>% 
+  mutate(firstggg = map_chr(data.biop, ~ pull(.x, Biopsy.GGG) %>% .[[1]])) %>% 
+  filter(firstggg == 1) %>% 
+  select(ID:data.trt)
+
+# Save to RDS ------------------------------------------------------------------
 saveRDS(nestdb, file = "rdsobj/nestdb.RDS")
+saveRDS(nestdb_g1, file = "rdsobj/nestdb_g1.RDS")

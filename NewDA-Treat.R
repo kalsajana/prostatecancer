@@ -115,8 +115,11 @@ inttrt <- nestdb %>%
 firsttrtmod <- nestdb %>% 
   mutate(firstmod = map_chr(data.trt, ~ .x %>% arrange(Trt.Dat) %>% pull(Trt.Mod) %>% nth(1))) %>% 
   mutate(secmod = map_chr(data.trt, ~ .x %>% arrange(Trt.Dat) %>% pull(Trt.Mod) %>% nth(2))) %>%
-  ### NOTE - If LHRH followed by RT, uses RT as first treatment modality
-  mutate(cormod = ifelse(((firstmod == "lhrh") & (secmod == "rt")),"rt",firstmod)) %>%  
+  ### NOTE - If LHRH followed by RT or RP, uses RT or RP as first treatment modality.
+  mutate(cormod = case_when(
+    ((firstmod == "lhrh") & (secmod == "rt")) ~ "rt",
+    ((firstmod == "lhrh") & (secmod == "rp")) ~ "rp",
+    TRUE ~ firstmod)) %>%
   group_by(cormod) %>%
   summarise(n = n()) %>% 
   mutate(pct = n/sum(n) * 100)

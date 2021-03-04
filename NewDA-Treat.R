@@ -87,8 +87,8 @@ nextggg <- nestdb %>%
   summarise(n = n()) %>% 
   mutate(pct = n/sum(n) * 100)
 
-##Time to first treatment
-timetreat <- nestdb %>% 
+##Wait time for treatment
+wait <- nestdb %>% 
   mutate(firsttrtdat = data.trt %>% 
            map_dbl(~ .x %>% pull(Trt.Dat) %>% min())) %>% 
   mutate(lastbiopsydate = map2_dbl(data.biop, firsttrtdat,
@@ -96,6 +96,16 @@ timetreat <- nestdb %>%
                                      filter(Biopsy.Dat < .y) %>% 
                                      pull(Biopsy.Dat) %>% max())) %>% 
   mutate(datdiff =  as_date(lastbiopsydate) %--% as_date(firsttrtdat)/years(1)) %>% 
+  summarise(
+    med = median(datdiff, na.rm = TRUE),
+    max = max(datdiff, na.rm = TRUE),
+    min = min(datdiff, na.rm = TRUE))
+
+##Interval between first biopsy and first treatment
+inttrt <- nestdb %>% 
+  mutate(firsttrtdat =  map_dbl(data.trt, ~ .x %>% pull(Trt.Dat) %>% min())) %>% 
+  mutate(firstbiopsydat = map_dbl(data.biop, ~ .x %>% pull(Biopsy.Dat) %>% min())) %>% 
+  mutate(datdiff =  as_date(firstbiopsydat) %--% as_date(firsttrtdat)/years(1)) %>% 
   summarise(
     med = median(datdiff, na.rm = TRUE),
     max = max(datdiff, na.rm = TRUE),
@@ -117,8 +127,9 @@ subtbl_trt <- list("Length of follow up" = lenfu,
               "Maximal GGG on biopsy" = maxggg,
               "Upgraded GGG from GGG1" = nextggg,
               "Treatment modalities used" = trtrec,
-              "First treatment modality" = firsttrtmod,
-              "Time until first treatment" = timetreat) %>% 
+              "Wait time until treatment" = wait,
+              "Interval between first diagnostic biopsy & treatment" = inttrt,
+              "First treatment modality" = firsttrtmod) %>% 
   map(~ .x %>% mutate_if(is.numeric, ~ round(.,2)))
 
 print(subtbl_trt)

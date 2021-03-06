@@ -18,3 +18,4 @@ vignettes/*.pdf
 .Renviron
 /*_files/
 extra/
+rdsobj/

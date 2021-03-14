@@ -122,6 +122,7 @@ nestdb_g1 <- nestdb %>%
 nestdb_gx <- temp %>% filter(!firstggg == 1) %>% select(ID:data.trt)
 
 # Save to RDS ------------------------------------------------------------------
+dir.create("rdsobj")
 saveRDS(nestdb, file = "rdsobj/nestdb.RDS")
 saveRDS(nestdb_g1, file = "rdsobj/nestdb_g1.RDS")
 saveRDS(nestdb_gx, file = "rdsobj/nestdb_gx.RDS")

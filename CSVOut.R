@@ -8,7 +8,7 @@ rm(list = ls())
 nestdb <- readRDS("rdsobj/nestdb.RDS")
 nestdb_md5 <- tools::md5sum("rdsobj/nestdb.RDS")
 
-coln <- read.csv('col_names.csv', header = FALSE)
+coln <- read.csv('reference/col_names.csv', header = FALSE)
 
 # Other edits -------------------
 tempdb <- nestdb 

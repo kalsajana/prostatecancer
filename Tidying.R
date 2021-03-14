@@ -4,7 +4,7 @@ library(janitor)
 # Import  ---------------------------------------------------------------
 rm(list = ls())
 
-coln <- read_csv('col_names.csv', col_names = FALSE)
+coln <- read_csv('reference/col_names.csv', col_names = FALSE)
 db <- read.csv('data/21-Jan-2021_AS_258_Cohort.csv',
                header = TRUE,
                col.names = coln[[2]],

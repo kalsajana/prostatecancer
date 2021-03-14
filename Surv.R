@@ -9,7 +9,7 @@ rm(list = ls())
 nestdb <- readRDS("rdsobj/nestdb_g1.RDS")
 nestdb_md5 <- tools::md5sum("rdsobj/nestdb_g1.RDS")
 
-coln <- read.csv('col_names.csv', header = FALSE)
+coln <- read.csv('reference/col_names.csv', header = FALSE)
 
 # Plot creations -------------------------
 mod_data <- mutate(nestdb,

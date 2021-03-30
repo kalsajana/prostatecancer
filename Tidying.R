@@ -101,6 +101,12 @@ nestdb <- nestdb %>%
          Eth = str_replace(Eth,"south east asian","asian"),
          Eth = str_replace(Eth,"native american","first nations"))
 
+## Remove TURPS from the biopsies
+nestdb <- nestdb %>% 
+  mutate(data.biop = map(data.biop, ~ .x %>% 
+                           filter(Biopsy.Dat.Orig == "biopsy")))
+
+
 # Alternative file without G1 start --------------------------------------------
 ### Drop rows all leading rows with NA for Biopsy.GGG
 replace_na <- function(df){

@@ -3,27 +3,27 @@ library(tidyverse)
 
 # Import -------------
 rm(list = ls())
-nestdb <- readRDS("rdsobj/nestdb.RDS")
-nestdb_md5 <- tools::md5sum("rdsobj/nestdb.RDS")
+source("Tidying.R")
+source("func.R")
 
-coln <- read.csv('reference/col_names.csv', header = FALSE)
 # Analysis -------------------
+bl_analysis <- function(inputdb){
 
 ## Age(mean,sd)
-age <- nestdb %>%
+age <- inputdb %>%
   summarise(
     mean = mean(AgeDx,na.rm = TRUE),
     sd = sd(AgeDx,na.rm = TRUE)
   ) 
 
 ## Ethnicity(n,%)
-eth <- nestdb %>%
+eth <- inputdb %>%
   group_by(Eth) %>%
   summarise(n = n()) %>% 
   mutate(pct = n/sum(n) * 100)
 
 ## First degree fam-relative(n,%)
-fmhx <- nestdb %>% 
+fmhx <- inputdb %>% 
   mutate(famcount = data.fhx %>% 
            map_int(~ .x$FamHx %in% c("son","sibling","brother","parent","father") %>% sum()) %>% {ifelse(. > 0,T,F)}) %>% 
   group_by(famcount) %>%
@@ -32,7 +32,7 @@ fmhx <- nestdb %>%
   
 
 ## First PSA (n, %)
-psa <- nestdb %>% 
+psa <- inputdb %>% 
   mutate(firstpsa = data.biop %>% 
             map_dbl(~ .x %>% slice(which.min(Biopsy.Dat)) %>% .$Biopsy.PSA)) %>% 
   summarise(
@@ -49,7 +49,7 @@ replace_na <- function(df){
   return(df)
 }
 
-gggfb <- nestdb %>% 
+gggfb <- inputdb %>% 
   mutate(firstggg = data.biop %>% 
                map_int(~ .x %>% replace_na() %>% slice(which.min(Biopsy.Dat)) %>% .$Biopsy.GGG)) %>% 
   group_by(firstggg) %>% 
@@ -57,7 +57,7 @@ gggfb <- nestdb %>%
   mutate(pct = n/sum(n) * 100)
 
 ## Of positive cores (n,%)
-cores <- nestdb %>% 
+cores <- inputdb %>% 
   mutate(firstc = data.biop %>% 
            map_int(~ .x %>% slice(which.min(Biopsy.Dat)) %>% .$Biopsy.PosCores)) %>% 
   group_by(firstc) %>% 
@@ -65,7 +65,7 @@ cores <- nestdb %>%
   mutate(pct = n/sum(n) * 100)
 
 ## PSA Density
-dens <- nestdb %>% 
+dens <- inputdb %>% 
   mutate(firstden = data.biop %>% 
            map_dbl(~ .x %>% mutate(Biopsy.PSADens = Biopsy.PSA/Biopsy.Vol) %>% slice(which.min(Biopsy.Dat)) %>% .$Biopsy.PSADens)) %>% 
   mutate(gate = case_when(
@@ -88,4 +88,14 @@ subtbl_bl <- list("Age at diagnosis" = age,
   map(~ .x %>% mutate_if(is.numeric, ~ round(.,2)))
 
 print(subtbl_bl)
+return(subtbl_bl)
+}
+
+new_directory("output")
+
+bl_all <- bl_analysis(nestdb) 
+amalgated_df(bl_all,"output/bl_all.csv")
+
+bl_g1 <- bl_analysis(nestdb_g1)
+amalgated_df(bl_g1,"output/bl_g1.csv")
 

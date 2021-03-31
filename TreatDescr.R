@@ -5,13 +5,12 @@ library(lubridate)
 
 # Import -------------
 rm(list = ls())
-nestdb <- readRDS("rdsobj/nestdb_g1.RDS")
-nestdb_md5 <- tools::md5sum("rdsobj/nestdb_g1.RDS")
-
-coln <- read.csv('reference/col_names.csv', header = FALSE)
+source("Tidying.R")
+source("func.R")
 
 #Analysis -------------------
-
+trt_analysis <- function(inputdb){
+  
 ## Length of follow-up(years), median (IQR)
 lenfu <- nestdb %>% 
   summarise(
@@ -142,3 +141,10 @@ subtbl_trt <- list("Length of follow up" = lenfu,
   map(~ .x %>% mutate_if(is.numeric, ~ round(.,2)))
 
 print(subtbl_trt)
+return(subtbl_trt)
+}
+
+new_directory("output")
+
+trt_g1 <- trt_analysis(nestdb_g1)
+amalgated_df(trt_g1,"output/trt_g1.csv")

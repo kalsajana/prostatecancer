@@ -3,8 +3,11 @@ library(janitor)
 
 # Import  ---------------------------------------------------------------
 rm(list = ls())
+source("func.R")
 
-coln <- read_csv('reference/col_names.csv', col_names = FALSE)
+coln <- read.csv('reference/col_names.csv',
+                 header = FALSE,
+                 strip.white = TRUE) %>% tibble()
 db <- read.csv('data/21-Jan-2021_AS_258_Cohort.csv',
                header = TRUE,
                col.names = coln[[2]],
@@ -37,7 +40,8 @@ tmp1 <- db %>%
   janitor::remove_empty("rows") %>%
   fill(ID,.direction = "down") %>%
   group_by(ID) %>% 
-  nest(.key = "data.fhx")
+  nest() %>% 
+  rename("data.fhx" = "data")
 
 ##Biopsy information
 tmp2 <- db %>% 
@@ -46,7 +50,8 @@ tmp2 <- db %>%
   fill(ID,.direction = "down") %>%
   group_by(ID) %>% 
   arrange(Biopsy.Dat, .by_group = TRUE) %>% 
-  nest(.key = "data.biop")
+  nest() %>% 
+  rename("data.biop" = "data")
 
 ##PSA closest to biopsy
 tmp3 <- db %>% 
@@ -55,7 +60,8 @@ tmp3 <- db %>%
   fill(ID,.direction = "down") %>%
   group_by(ID) %>% 
   arrange(BioClosest.Dat, .by_group = TRUE) %>% 
-  nest(.key = "data.oth")
+  nest() %>% 
+  rename("data.oth" = "data")
 
 ##Treatment modality
 tmp4 <- db %>% 
@@ -64,7 +70,8 @@ tmp4 <- db %>%
   fill(ID,.direction = "down") %>%
   group_by(ID) %>% 
   arrange(Trt.Dat, .by_group = TRUE) %>% 
-  nest(.key = "data.trt")
+  nest() %>% 
+  rename("data.trt" = "data")
 
 ##Combine into single object
 nestdb <- full_join(tmp0,tmp1,by = "ID") %>% 
@@ -128,7 +135,10 @@ nestdb_g1 <- nestdb %>%
 nestdb_gx <- temp %>% filter(!firstggg == 1) %>% select(ID:data.trt)
 
 # Save to RDS ------------------------------------------------------------------
-dir.create("rdsobj")
+new_directory("rdsobj")
+
 saveRDS(nestdb, file = "rdsobj/nestdb.RDS")
 saveRDS(nestdb_g1, file = "rdsobj/nestdb_g1.RDS")
 saveRDS(nestdb_gx, file = "rdsobj/nestdb_gx.RDS")
+
+rm(temp,db,replace_na)

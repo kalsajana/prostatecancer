@@ -6,10 +6,8 @@ library(survminer)
 
 # Import -------------
 rm(list = ls())
-nestdb <- readRDS("rdsobj/nestdb_g1.RDS")
-nestdb_md5 <- tools::md5sum("rdsobj/nestdb_g1.RDS")
-
-coln <- read.csv('reference/col_names.csv', header = FALSE)
+source("Tidying.R")
+source("func.R")
 
 # Plot creations -------------------------
 mod_data <- mutate(nestdb,
@@ -33,9 +31,22 @@ mod_data <- mutate(nestdb,
 
 
 km_surv <- survfit(Surv(time,censored) ~ 1,data = mod_data)
-ggsurvplot(km_surv, 
+
+survp <- ggsurvplot(km_surv, 
            risk.table = TRUE,
            xlab = "Time since first biopsy (Years)",
            ylab = "Probability of upgrading free survival",
            ggtheme = theme_light())
 
+print(survp)
+
+# Save the plot -----------------------------------------
+new_directory("rdsobj")
+ggsave(
+  "output/survplot.png",
+  plot = print(survp),
+  scale = 1,
+  width = NA,
+  height = NA,
+  dpi = 500
+)

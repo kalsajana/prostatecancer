@@ -69,8 +69,8 @@ dens <- inputdb %>%
   mutate(firstden = data.biop %>% 
            map_dbl(~ .x %>% mutate(Biopsy.PSADens = Biopsy.PSA/Biopsy.Vol) %>% slice(which.min(Biopsy.Dat)) %>% .$Biopsy.PSADens)) %>% 
   mutate(gate = case_when(
-    firstden < 0.15 ~ "low",
-    firstden >= 0.15 ~ "high"
+    firstden < 0.15 ~ "< 0.15",
+    firstden >= 0.15 ~ ">= 0.15"
   )) %>% 
   group_by(gate) %>% 
   summarise(n = n()) %>% 
@@ -79,12 +79,12 @@ dens <- inputdb %>%
 
 # Create a list of all the subtables ---------------------
 subtbl_bl <- list("Age at diagnosis" = age,
-                  "Ethnicity" = eth,
-                  "Family Hx" = fmhx,
+                  "Ethnicity" = eth %>% modify_at(1,as.character),
+                  "Family Hx" = fmhx %>% modify_at(1,as.character),
                   "First PSA" = psa,
+                  "PSA density at time of first biopsy" = dens %>% modify_at(1,as.character),
                   "GGG on first biopsy" = gggfb,
-                  "Number of postivie cores on first biopsy" = cores,
-                  "PSA density at time of first biopsy" = dens) %>% 
+                  "Number of postivie cores on first biopsy" = cores) %>% 
   map(~ .x %>% mutate_if(is.numeric, ~ round(.,2)))
 
 print(subtbl_bl)

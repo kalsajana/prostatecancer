@@ -132,12 +132,13 @@ subtbl_trt <- list("Length of follow up" = lenfu,
               "Number of follow up biopsies" = numfubiop,
               "Time between each biopsy" = timebiop,
               "Median time before upgrade from GGG1" = medupfreesurv,
-              "Maximal GGG on biopsy" = maxggg,
-              "Upgraded GGG from GGG1" = nextggg,
-              "Treatment modalities used" = trtrec,
+              "Maximal GGG on biopsy" = maxggg %>% modify_at(1,as.character),
+              "Upgraded GGG from GGG1" = nextggg %>% modify_at(1,as.character),
+              "Treatment modalities used" = trtrec %>% modify_at(1,as.character),
               "Wait time until treatment" = wait,
               "Interval between first diagnostic biopsy & treatment" = inttrt,
-              "First treatment modality" = firsttrtmod) %>% 
+              "First treatment modality" = firsttrtmod %>% modify_at(1,as.character)
+              ) %>% 
   map(~ .x %>% mutate_if(is.numeric, ~ round(.,2)))
 
 print(subtbl_trt)

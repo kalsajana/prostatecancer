@@ -17,7 +17,7 @@ amalgated_df <- function(input_list,output_file) {
 squish <- function(input_list,output_file = NULL){
   for(i in names(input_list)){
       #Check if label present. TRUE = Yes
-      label <- ifelse(class(input_list[[i]][[1]]) == "character",TRUE,FALSE)
+      label <- ifelse(class(input_list[[i]][[1]]) == "character" ,TRUE,FALSE)
       #Check the number of rows
       col_num <- ncol(input_list[[i]])
 
@@ -46,6 +46,7 @@ squish <- function(input_list,output_file = NULL){
         input_list[[i]] <- mutate(input_list[[i]], name = as.character(i), .before = 1)
       }
   }
+  print("SQUSHED-OUTPUTS-----------------")
   print(input_list)
   
   #Save the new glued object if there is an output_file defined

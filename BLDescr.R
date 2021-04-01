@@ -92,10 +92,12 @@ return(subtbl_bl)
 }
 
 new_directory("output")
+new_directory("output/squish")
 
 bl_all <- bl_analysis(nestdb) 
 amalgated_df(bl_all,"output/bl_all.csv")
+squish(bl_all,"output/squish/bl_all_squish.csv")
 
 bl_g1 <- bl_analysis(nestdb_g1)
 amalgated_df(bl_g1,"output/bl_g1.csv")
-
+squish(bl_g1,"output/squish/bl_g1_squish.csv")

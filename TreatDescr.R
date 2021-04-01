@@ -26,8 +26,8 @@ numfubiop <- nestdb %>%
            map_int(~ .x %>% janitor::remove_empty("rows") %>% nrow())) %>% 
   summarise(
     med = median(num, na.rm = TRUE),
-    max = max(num, na.rm = TRUE),
-    min = min(num, na.rm = TRUE))
+    min = min(num, na.rm = TRUE),
+    max = max(num, na.rm = TRUE))
   
 ##Time between biopsies
 timebiop <- map(nestdb$data.biop, ~ .x %>% 
@@ -64,8 +64,8 @@ medupfreesurv <- nestdb %>%
   filter(!datdiff %in% c(0,NA)) %>% 
   summarise(
     med = median(datdiff, na.rm = TRUE),
-    max = max(datdiff, na.rm = TRUE),
-    min = min(datdiff, na.rm = TRUE))
+    min = min(datdiff, na.rm = TRUE),
+    max = max(datdiff, na.rm = TRUE))
 
 ## Max GGG obtained
 maxggg <- nestdb %>% 
@@ -97,8 +97,8 @@ wait <- nestdb %>%
   mutate(datdiff =  as_date(lastbiopsydate) %--% as_date(firsttrtdat)/years(1)) %>% 
   summarise(
     med = median(datdiff, na.rm = TRUE),
-    max = max(datdiff, na.rm = TRUE),
-    min = min(datdiff, na.rm = TRUE))
+    min = min(datdiff, na.rm = TRUE),
+    max = max(datdiff, na.rm = TRUE))
 
 ##Interval between first biopsy and first treatment
 inttrt <- nestdb %>% 
@@ -107,8 +107,8 @@ inttrt <- nestdb %>%
   mutate(datdiff =  as_date(firstbiopsydat) %--% as_date(firsttrtdat)/years(1)) %>% 
   summarise(
     med = median(datdiff, na.rm = TRUE),
-    max = max(datdiff, na.rm = TRUE),
-    min = min(datdiff, na.rm = TRUE))
+    min = min(datdiff, na.rm = TRUE),
+    max = min(datdiff, na.rm = TRUE))
 
 ##First treatment modality
 firsttrtmod <- nestdb %>% 
@@ -142,9 +142,13 @@ subtbl_trt <- list("Length of follow up" = lenfu,
 
 print(subtbl_trt)
 return(subtbl_trt)
+
 }
 
 new_directory("output")
+new_directory("output/squish")
 
 trt_g1 <- trt_analysis(nestdb_g1)
 amalgated_df(trt_g1,"output/trt_g1.csv")
+squish(trt_g1,"output/squish/trt_g1_squish.csv")
+

@@ -3,6 +3,7 @@ library(tidyverse)
 library(janitor)
 library(survival)
 library(survminer)
+library(lubridate)
 
 # Import -------------
 rm(list = ls())
@@ -10,7 +11,7 @@ source("Tidying.R")
 source("func.R")
 
 # Plot creations -------------------------
-mod_data <- mutate(nestdb,
+mod_data <- mutate(nestdb_g1,
                    # Arrange all by date.bio, and drop any empty GGGs in advance.
                    data.biop = map(data.biop, ~ .x %>% arrange(Biopsy.Dat) %>% drop_na(Biopsy.GGG)),
                    # Pull the first biopsy date which is not a GGG1. NA returned if all were GGG1
